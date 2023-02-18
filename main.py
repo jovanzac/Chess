@@ -8,6 +8,7 @@ FPS = 60
 DARK_BROWN = (249, 172, 113)
 LIGHT_BROWN = (103, 51, 20)
 LIGHT_GREEN = (80, 165, 4)
+BLACK = (0, 0, 0)
 
 
 
@@ -20,6 +21,11 @@ class Control :
         self.selected = None, None
         self.possible_moves = []
         self.turn = self.white_pieces_pos
+        self.opponent = self.black_pieces_pos
+        self.pieces_lost = {
+            "black" : [],
+            "white" : [],
+        }
 
 
     def set_board(self, orient) :
@@ -46,7 +52,7 @@ class Control :
                 self.black_pieces_pos[i][1] = [[7-i[0], 7-i[1]] for i in self.black_pieces_pos[i][1]]
             for i in self.white_pieces_pos :
                 self.white_pieces_pos[i][1] = [[7-i[0], 7-i[1]] for i in self.white_pieces_pos[i][1]]
-            self.turn = self.white_pieces_pos if self.turn == self.black_pieces_pos else self.black_pieces_pos
+            self.turn, self.opponent = self.opponent, self.turn
 
 
     def load_assets(self) :
@@ -87,11 +93,10 @@ class Control :
         def free_space(seq) :
             return [i for i in seq if self.scan_board(i[0], i[1]) not in self.turn or self.scan_board(i[0], i[1]) == None]
         def loop(condition, i, j, a, b) :
-            opp = self.black_pieces_pos if self.turn == self.white_pieces_pos else self.white_pieces_pos
             while(free_space(limit([[i, j]]))) :
                 print(f"i, j is : {i, j}")
                 ret.append([i, j])
-                if condition(i, j) in opp :
+                if condition(i, j) in self.opponent :
                     print("in condition")
                     break
                 i += a
@@ -149,6 +154,12 @@ class Control :
             self.selected = (piece, loc)
             self.possible_moves = self.piece_move(piece, loc)
         elif self.selected[1] and loc in self.possible_moves :
+            # If there is a piece in the new location, it gets taken
+            if piece :
+                opp = "black" if self.opponent == self.black_pieces_pos else "white"
+                self.opponent[piece][1].remove(loc)
+                self.pieces_lost[opp].append(piece)
+                print(f"lost pieces are: {self.pieces_lost}")
             self.turn[self.selected[0]][1].remove(self.selected[1])
             self.turn[self.selected[0]][1].append(loc)
             self.selected = None, None
@@ -163,11 +174,12 @@ class Control :
             for j in range(8) :
                 colour = LIGHT_GREEN
                 self.SQ.update(j*100, i*100, 100, 100)
-                if (i+j)%2 == 0 and self.selected[1] != [i, j] :
+                if (i+j)%2 == 0 and [i, j] not in [self.selected[1]] + self.possible_moves :
                     colour = LIGHT_BROWN
-                elif self.selected[1] != [i, j] :
+                elif [i, j] not in [self.selected[1]] + self.possible_moves  :
                     colour = DARK_BROWN
                 pygame.draw.rect(self.WIN, colour, self.SQ)
+                pygame.draw.rect(self.WIN, BLACK, self.SQ, 2)
                 piece = self.scan_board(i, j)
                 if piece :
                     self.WIN.blit(piece, (j*100+25, i*100+25))
