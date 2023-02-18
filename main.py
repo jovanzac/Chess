@@ -15,30 +15,37 @@ class Control :
     def __init__(self, WIN) :
         self.WIN = WIN
         self.SQ = pygame.Rect(0, 0, 100, 100)
-        self.selected = None, None
         self.load_assets()
         self.set_board(0)
+        self.selected = None, None
+        self.turn = self.white_pieces_pos
 
 
     def set_board(self, orient) :
         if orient == 0 :
-            self.pieces_pos = {
-                self.b_king: (1, [[0, 4]]),
-                self.b_bishop: (2, [[0, 2], [0, 5]]),
-                self.b_knight: (2, [[0, 1], [0, 6]]),
-                self.b_pawn: (8, [[1, i] for i in range(8)]),
-                self.b_queen: (1, [[0, 3]]),
-                self.b_rook: (2, [[0, 0], [0, 7]]),
-
-                self.w_king: (1, [[7, 4]]),
-                self.w_bishop: (2, [[7, 2], [7, 5]]),
-                self.w_knight: (2, [[7, 1], [7, 6]]),
-                self.w_pawn: (8, [[6, i] for i in range(8)]),
-                self.w_queen: (1, [[7, 3]]),
-                self.w_rook: (2, [[7, 0], [7, 7]])
+            self.black_pieces_pos = {
+                self.b_king: [1, [[0, 4]]],
+                self.b_bishop: [2, [[0, 2], [0, 5]]],
+                self.b_knight: [2, [[0, 1], [0, 6]]],
+                self.b_pawn: [8, [[1, i] for i in range(8)]],
+                self.b_queen: [1, [[0, 3]]],
+                self.b_rook: [2, [[0, 0], [0, 7]]],
+            }
+            self.white_pieces_pos = {
+                self.w_king: [1, [[7, 4]]],
+                self.w_bishop: [2, [[7, 2], [7, 5]]],
+                self.w_knight: [2, [[7, 1], [7, 6]]],
+                self.w_pawn: [8, [[6, i] for i in range(8)]],
+                self.w_queen: [1, [[7, 3]]],
+                self.w_rook: [2, [[7, 0], [7, 7]]]
             }
         elif orient == -1 :
-            pass
+            # Switch sides
+            for i in self.black_pieces_pos :
+                self.black_pieces_pos[i][1] = [[7-i[0], 7-i[1]] for i in self.black_pieces_pos[i][1]]
+            for i in self.white_pieces_pos :
+                self.white_pieces_pos[i][1] = [[7-i[0], 7-i[1]] for i in self.white_pieces_pos[i][1]]
+            self.turn = self.white_pieces_pos if self.turn == self.black_pieces_pos else self.black_pieces_pos
 
 
     def load_assets(self) :
@@ -64,8 +71,11 @@ class Control :
 
     def scan_board(self, r, c) :
         ret = None
-        for i in self.pieces_pos :
-            if [r, c] in self.pieces_pos[i][1] :
+        for i in self.black_pieces_pos :
+            if [r, c] in self.black_pieces_pos[i][1] :
+                ret = i
+        for i in self.white_pieces_pos :
+            if [r, c] in self.white_pieces_pos[i][1] :
                 ret = i
         return ret
 
@@ -81,8 +91,11 @@ class Control :
 
     def click_handle(self, loc) :
         ret = self.scan_board(loc[0], loc[1])
-        if ret :
+        if ret in self.turn :
             self.selected = (ret, loc)
+        elif self.selected[1] :
+            self.selected = None, None
+            self.set_board(-1)
 
 
     def draw_window(self) :
