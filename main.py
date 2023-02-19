@@ -27,6 +27,11 @@ class Control :
             "white" : [],
         }
         self.check_condition = False
+        self.starting_pos = {
+            (self.w_pawn, self.b_pawn) : [[[6, i], 0] for i in range(8)],
+            (self.w_king, self.b_king) : [[[7, 4], 0]],
+            (self.w_rook, self.b_rook) : [[[7, 0], 0], [[7, 7], 0]]
+        }
 
 
     def set_board(self, orient) :
@@ -114,6 +119,9 @@ class Control :
                 ret.remove([pos[0]-1, pos[1]-1])
             if not self.scan_board(pos[0]-1, pos[1]+1) and [pos[0]-1, pos[1]+1] in ret :
                 ret.remove([pos[0]-1, pos[1]+1])
+            t = (self.w_pawn, self.b_pawn)
+            if piece in t and [i for i in range(2) if [pos, i] in self.starting_pos[t]] :
+                ret.append([pos[0]-2, pos[1]])
         # If piece is a bishop
         elif piece in [self.b_bishop, self.w_bishop] :
             i, j = pos[0]-1, pos[1]-1
@@ -198,6 +206,10 @@ class Control :
                 opp = "black" if self.opponent == self.black_pieces_pos else "white"
                 self.opponent[piece][1].remove(loc)
                 self.pieces_lost[opp].append(piece)
+            t = (self.w_pawn, self.b_pawn)
+            i = 2 if [self.selected[1], 1] in self.starting_pos[t] else 1 if [self.selected[1], 0] in self.starting_pos[t] else None
+            if self.selected[0] in t and i :
+                self.starting_pos[t][self.starting_pos[t].index([self.selected[1], i-1])][1] += 1
             self.turn[self.selected[0]][1].remove(self.selected[1])
             self.turn[self.selected[0]][1].append(loc)
             self.selected = None, None
