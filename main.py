@@ -144,10 +144,8 @@ class Control :
                 [pos[0]-2, pos[1]+1], [pos[0]-2, pos[1]-1], [pos[0]-1, pos[1]+2], [pos[0]-1, pos[1]-2],
                 [pos[0]+2, pos[1]+1], [pos[0]+2, pos[1]-1], [pos[0]+1, pos[1]+2], [pos[0]+1, pos[1]-2]
             ]))
-        # print(f"Outside stage and filter ret value is: {ret}")
         if self.check_condition and p :
             ret = self.stage_and_filter(ret, piece, pos)
-            print(f"in stage and filter returned value is : {ret}")
         return ret
 
 
@@ -182,13 +180,9 @@ class Control :
     def check(self) :
         attacked = self.attacked_loc()
         king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
-        print(f"king location is: {self.turn[king][1][0]}")
-        print(f"attacked locations are: {attacked}")
         if self.turn[king][1][0] in attacked :
-            print("Check condition set to true")
             self.check_condition = True
         else :
-            print("check condition set to false")
             self.check_condition = False
 
 
