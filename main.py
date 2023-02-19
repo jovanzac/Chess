@@ -114,11 +114,13 @@ class Control :
             ret = free_space(limit([[i, j]for i in range(pos[0]-1, pos[0]+2) for j in range(pos[1]-1, pos[1]+2)]))
         # If piece is a pawn
         elif piece in [self.b_pawn, self.w_pawn] :
+            def pawn_remove(condition, i, j) :
+                if condition(i, j) :
+                    ret.remove([i, j])
             ret = free_space(limit([[pos[0]-1, pos[1]-1], [pos[0]-1, pos[1]], [pos[0]-1, pos[1]+1]]))
-            if not self.scan_board(pos[0]-1, pos[1]-1) and [pos[0]-1, pos[1]-1] in ret :
-                ret.remove([pos[0]-1, pos[1]-1])
-            if not self.scan_board(pos[0]-1, pos[1]+1) and [pos[0]-1, pos[1]+1] in ret :
-                ret.remove([pos[0]-1, pos[1]+1])
+            pawn_remove(lambda i, j: not self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1]-1)
+            pawn_remove(lambda i, j: not self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1]+1)
+            pawn_remove(lambda i, j: self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1])
             t = (self.w_pawn, self.b_pawn)
             if piece in t and [i for i in range(2) if [pos, i] in self.starting_pos[t]] :
                 ret.append([pos[0]-2, pos[1]])
