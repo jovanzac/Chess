@@ -26,6 +26,7 @@ class Control :
             "black" : [],
             "white" : [],
         }
+        self.check_condition = False
 
 
     def set_board(self, orient) :
@@ -87,22 +88,22 @@ class Control :
         return ret
 
 
-    def piece_move(self, piece, pos) :
+    def piece_move(self, piece, pos, p) :
         def limit(seq) :
             return [i for i in seq if i[0] in range(0, 8) and i[1] in range(0, 8) and i != pos]
         def free_space(seq) :
-            return [i for i in seq if self.scan_board(i[0], i[1]) not in self.turn or self.scan_board(i[0], i[1]) == None]
+            return [i for i in seq if self.scan_board(i[0], i[1]) not in own or self.scan_board(i[0], i[1]) == None]
         def loop(condition, i, j, a, b) :
             while(free_space(limit([[i, j]]))) :
-                print(f"i, j is : {i, j}")
                 ret.append([i, j])
-                if condition(i, j) in self.opponent :
-                    print("in condition")
+                if condition(i, j) in opp :
                     break
                 i += a
                 j += b
 
         ret = []
+        own = self.turn if p else self.opponent
+        opp = self.opponent if p else self.turn
         # If piece is a king
         if piece in [self.b_king, self.w_king] :
             ret = free_space(limit([[i, j]for i in range(pos[0]-1, pos[0]+2) for j in range(pos[1]-1, pos[1]+2)]))
@@ -135,31 +136,74 @@ class Control :
             loop(lambda i, j:self.scan_board(i, j), i, j, 0, 1)
         # If piece is a queen
         elif piece in [self.b_queen, self.w_queen] :
-            ret += self.piece_move(self.b_bishop, pos)
-            ret += self.piece_move(self.b_rook, pos)
+            ret += self.piece_move(self.b_bishop, pos, p)
+            ret += self.piece_move(self.b_rook, pos, p)
         # If piece is a knight
         elif piece in [self.b_knight, self.w_knight] :
             ret = free_space(limit([
                 [pos[0]-2, pos[1]+1], [pos[0]-2, pos[1]-1], [pos[0]-1, pos[1]+2], [pos[0]-1, pos[1]-2],
                 [pos[0]+2, pos[1]+1], [pos[0]+2, pos[1]-1], [pos[0]+1, pos[1]+2], [pos[0]+1, pos[1]-2]
             ]))
-
-        print(f"returned value is : {ret}")
+        # print(f"Outside stage and filter ret value is: {ret}")
+        if self.check_condition and p :
+            ret = self.stage_and_filter(ret, piece, pos)
+            print(f"in stage and filter returned value is : {ret}")
         return ret
+
+
+    def stage_and_filter(self, moves, piece, pos) :
+        ret = []
+        if piece not in self.turn :
+            return moves
+        self.turn[piece][1].remove(pos)
+        for i in moves :
+            native = self.scan_board(i[0], i[1])
+            if native :
+                self.opponent[native][1].remove(i)
+            self.turn[piece][1].append(i)
+            self.check()
+            if not self.check_condition :
+                ret.append(i)
+            self.turn[piece][1].remove(i)
+            if native :
+                self.opponent[native][1].append(i)
+        self.turn[piece][1].append(pos)
+        return ret
+
+
+    def attacked_loc(self) :
+        ret = []
+        for i in self.opponent :
+            for j in self.opponent[i][1] :
+                ret += self.piece_move(i, j, False)
+        return ret
+
+
+    def check(self) :
+        attacked = self.attacked_loc()
+        king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
+        print(f"king location is: {self.turn[king][1][0]}")
+        print(f"attacked locations are: {attacked}")
+        if self.turn[king][1][0] in attacked :
+            print("Check condition set to true")
+            self.check_condition = True
+        else :
+            print("check condition set to false")
+            self.check_condition = False
 
 
     def click_handle(self, loc) :
         piece = self.scan_board(loc[0], loc[1])
         if piece in self.turn :
+            self.check()
             self.selected = (piece, loc)
-            self.possible_moves = self.piece_move(piece, loc)
+            self.possible_moves = self.piece_move(piece, loc, True)
         elif self.selected[1] and loc in self.possible_moves :
             # If there is a piece in the new location, it gets taken
             if piece :
                 opp = "black" if self.opponent == self.black_pieces_pos else "white"
                 self.opponent[piece][1].remove(loc)
                 self.pieces_lost[opp].append(piece)
-                print(f"lost pieces are: {self.pieces_lost}")
             self.turn[self.selected[0]][1].remove(self.selected[1])
             self.turn[self.selected[0]][1].append(loc)
             self.selected = None, None
