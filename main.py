@@ -29,8 +29,12 @@ class Control :
         self.check_condition = False
         self.starting_pos = {
             (self.w_pawn, self.b_pawn) : [[[6, i], 0] for i in range(8)],
-            (self.w_king, self.b_king) : [[[7, 4], 0]],
-            (self.w_rook, self.b_rook) : [[[7, 0], 0], [[7, 7], 0]]
+        }
+        self.castle_count = {
+            "white-left": 0,
+            "white-right": 0,
+            "black-left": 0,
+            "black-right": 0
         }
 
 
@@ -54,6 +58,8 @@ class Control :
             }
         elif orient == -1 :
             # Switch sides
+            self.selected = None, None
+            self.possible_moves = []
             for i in self.black_pieces_pos :
                 self.black_pieces_pos[i][1] = [[7-i[0], 7-i[1]] for i in self.black_pieces_pos[i][1]]
             for i in self.white_pieces_pos :
@@ -196,14 +202,40 @@ class Control :
             self.check_condition = False
 
 
+    def castle(self, king, rook, rook_pos) :
+        """Implement castling"""
+        def check_empty() :
+            r = range(0, blocks+1) if direction == "left" else range(5, 7) if side == "white" else range(4, 7)
+            l =list(set([self.scan_board(7, i) for i in r]))
+            return True if len(l) == 1 and l[0] == None else False
+        side = "white" if self.turn == self.white_pieces_pos else "black"
+        direction = "right" if rook_pos == [7, 7] else "left"
+        blocks = 3 if (direction=="left" and side=="white") or (direction=="right" and side=="black") else 2
+        if self.castle_count[f"{side}-{direction}"] == 0 and check_empty() :
+            if direction == "right" :
+                self.turn[king][1][0] = [7, self.turn[king][1][0][1]+2]
+                self.turn[rook][1].remove([7, 7])
+                self.turn[rook][1].append([7, 7-blocks])
+            elif direction == "left" :
+                self.turn[king][1][0] = [7, self.turn[king][1][0][1]-2]
+                self.turn[rook][1].remove([7, 0])
+                self.turn[rook][1].append([7, blocks])
+            self.castle_count[f"{side}-{direction}"] += 1
+            self.set_board(-1)
+
+
     def click_handle(self, loc) :
         piece = self.scan_board(loc[0], loc[1])
-        if piece in self.turn :
+        rook = self.w_rook if self.turn == self.white_pieces_pos else self.b_rook
+        king = self.w_king if self.turn == self.white_pieces_pos else self.b_king
+        if piece in self.turn and not (piece == rook and self.selected[0] == king) :
+            print("Here in first")
             self.check()
             self.selected = (piece, loc)
             self.possible_moves = self.piece_move(piece, loc, True)
         elif self.selected[1] and loc in self.possible_moves :
             # If there is a piece in the new location, it gets taken
+            print("here in second")
             if piece :
                 opp = "black" if self.opponent == self.black_pieces_pos else "white"
                 self.opponent[piece][1].remove(loc)
@@ -214,9 +246,10 @@ class Control :
                 self.starting_pos[t][self.starting_pos[t].index([self.selected[1], i-1])][1] += 1
             self.turn[self.selected[0]][1].remove(self.selected[1])
             self.turn[self.selected[0]][1].append(loc)
-            self.selected = None, None
-            self.possible_moves = []
             self.set_board(-1)
+        elif self.selected[0] == king and piece == rook :
+            print("here in third")
+            self.castle(king, rook, loc)
 
 
     def draw_window(self) :
