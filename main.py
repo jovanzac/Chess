@@ -196,12 +196,25 @@ class Control :
         return ret
 
 
-    def check(self) :
+    def checkmate(self) :
+        ret = []
+        for i in self.turn :
+            for j in self.turn[i][1] :
+               ret += self.piece_move(i, j, True)
+        if not ret :
+            return True
+        return False
+
+
+    def check(self, bool=False) :
         attacked = self.attacked_loc()
         self.checkcount = 0
         king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
         if self.turn[king][1][0] in attacked :
             self.check_condition = True
+            # if bool :
+            #     if self.checkmate() :
+            #         print(f"{'&'*100} CHECKMATE!!")
         else :
             self.check_condition = False
 
@@ -233,7 +246,7 @@ class Control :
         rook = self.w_rook if self.turn == self.white_pieces_pos else self.b_rook
         king = self.w_king if self.turn == self.white_pieces_pos else self.b_king
         if piece in self.turn and not (piece == rook and self.selected[0] == king) :
-            self.check()
+            self.check(bool=True)
             self.selected = (piece, loc)
             self.possible_moves = self.piece_move(piece, loc, True)
         elif self.selected[1] and loc in self.possible_moves :
