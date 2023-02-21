@@ -130,6 +130,7 @@ class Control :
             t = (self.w_pawn, self.b_pawn)
             if piece in t and [i for i in range(2) if [pos, i] in self.starting_pos[t]] :
                 ret.append([pos[0]-2, pos[1]])
+                pawn_remove(lambda i, j: self.scan_board(i, j) and [i, j] in ret, pos[0]-2, pos[1])
         # If piece is a bishop
         elif piece in [self.b_bishop, self.w_bishop] :
             i, j = pos[0]-1, pos[1]-1
