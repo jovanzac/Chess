@@ -36,21 +36,6 @@ class Control :
             "black-left": 0,
             "black-right": 0
         }
-        self.debugging = {
-            self.w_king: "white-king",
-            self.w_bishop: "white-bishop",
-            self.w_knight: "white-knight",
-            self.w_pawn: "white-pawn",
-            self.w_queen: "white-queen",
-            self.w_rook: "white-rook",
-            self.b_king: "black-king",
-            self.b_bishop: "black-bishop",
-            self.b_knight: "black-knight",
-            self.b_pawn: "black-pawn",
-            self.b_queen: "black-queen",
-            self.b_rook: "black-rook"
-        }
-        self.checkcount = 0
 
 
     def set_board(self, orient) :
