@@ -36,6 +36,21 @@ class Control :
             "black-left": 0,
             "black-right": 0
         }
+        self.debugging = {
+            self.w_king: "white-king",
+            self.w_bishop: "white-bishop",
+            self.w_knight: "white-knight",
+            self.w_pawn: "white-pawn",
+            self.w_queen: "white-queen",
+            self.w_rook: "white-rook",
+            self.b_king: "black-king",
+            self.b_bishop: "black-bishop",
+            self.b_knight: "black-knight",
+            self.b_pawn: "black-pawn",
+            self.b_queen: "black-queen",
+            self.b_rook: "black-rook"
+        }
+        self.checkcount = 0
 
 
     def set_board(self, orient) :
@@ -115,6 +130,8 @@ class Control :
         ret = []
         own = self.turn if p else self.opponent
         opp = self.opponent if p else self.turn
+        h = self.white_pieces_pos if self.debugging[piece][:5]=="white" else self.black_pieces_pos
+        turn = "white" if self.turn == self.white_pieces_pos else "black"
         # If piece is a king
         if piece in [self.b_king, self.w_king] :
             ret = free_space(limit([[i, j]for i in range(pos[0]-1, pos[0]+2) for j in range(pos[1]-1, pos[1]+2)]))
@@ -152,15 +169,15 @@ class Control :
             loop(lambda i, j:self.scan_board(i, j), i, j, 0, 1)
         # If piece is a queen
         elif piece in [self.b_queen, self.w_queen] :
-            ret += self.piece_move(self.b_bishop, pos, p)
-            ret += self.piece_move(self.b_rook, pos, p)
+            ret += self.piece_move(self.b_bishop, pos, 3)
+            ret += self.piece_move(self.b_rook, pos, 3)
         # If piece is a knight
         elif piece in [self.b_knight, self.w_knight] :
             ret = free_space(limit([
                 [pos[0]-2, pos[1]+1], [pos[0]-2, pos[1]-1], [pos[0]-1, pos[1]+2], [pos[0]-1, pos[1]-2],
                 [pos[0]+2, pos[1]+1], [pos[0]+2, pos[1]-1], [pos[0]+1, pos[1]+2], [pos[0]+1, pos[1]-2]
             ]))
-        if self.check_condition and p :
+        if self.check_condition and p and p != 3 :
             ret = self.stage_and_filter(ret, piece, pos)
         return ret
 
@@ -188,13 +205,16 @@ class Control :
     def attacked_loc(self) :
         ret = []
         for i in self.opponent :
+            a = 0
             for j in self.opponent[i][1] :
+                a += 1
                 ret += self.piece_move(i, j, False)
         return ret
 
 
     def check(self) :
         attacked = self.attacked_loc()
+        self.checkcount = 0
         king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
         if self.turn[king][1][0] in attacked :
             self.check_condition = True
@@ -229,13 +249,11 @@ class Control :
         rook = self.w_rook if self.turn == self.white_pieces_pos else self.b_rook
         king = self.w_king if self.turn == self.white_pieces_pos else self.b_king
         if piece in self.turn and not (piece == rook and self.selected[0] == king) :
-            print("Here in first")
             self.check()
             self.selected = (piece, loc)
             self.possible_moves = self.piece_move(piece, loc, True)
         elif self.selected[1] and loc in self.possible_moves :
             # If there is a piece in the new location, it gets taken
-            print("here in second")
             if piece :
                 opp = "black" if self.opponent == self.black_pieces_pos else "white"
                 self.opponent[piece][1].remove(loc)
@@ -248,7 +266,6 @@ class Control :
             self.turn[self.selected[0]][1].append(loc)
             self.set_board(-1)
         elif self.selected[0] == king and piece == rook :
-            print("here in third")
             self.castle(king, rook, loc)
 
 
@@ -286,7 +303,7 @@ class Control :
                     mouse_pos = [i//100 for i in pygame.mouse.get_pos()]
                     print(f"mouse button down values are: {mouse_pos[1], mouse_pos[0]}")
                     self.click_handle(mouse_pos[::-1])
-
+                
             self.draw_window()
 
         pygame.quit()
