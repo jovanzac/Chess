@@ -115,8 +115,6 @@ class Control :
         ret = []
         own = self.turn if p else self.opponent
         opp = self.opponent if p else self.turn
-        h = self.white_pieces_pos if self.debugging[piece][:5]=="white" else self.black_pieces_pos
-        turn = "white" if self.turn == self.white_pieces_pos else "black"
         # If piece is a king
         if piece in [self.b_king, self.w_king] :
             ret = free_space(limit([[i, j]for i in range(pos[0]-1, pos[0]+2) for j in range(pos[1]-1, pos[1]+2)]))
