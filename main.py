@@ -1,22 +1,44 @@
 import pygame
 import os
 
+pygame.font.init()
+
 WIDTH, HEIGHT = 800, 800
 PIECE_WIDTH, PIECE_HEIGHT = 50, 50
 FPS = 60
-#colours
+# Colours
 DARK_BROWN = (249, 172, 113)
 LIGHT_BROWN = (103, 51, 20)
 LIGHT_GREEN = (80, 165, 4)
 BLACK = (0, 0, 0)
-
+WHITE = (255, 255, 255)
+# Events
+CHECKMATE = pygame.USEREVENT + 1
+# Fonts
+GAMEOVER = pygame.font.SysFont("comicsans", 80)
 
 
 class Control :
-    def __init__(self, WIN) :
+    def __init__(self, WIN, pieces) :
         self.WIN = WIN
         self.SQ = pygame.Rect(0, 0, 100, 100)
-        self.load_assets()
+        self.pieces = pieces
+        # Initializing the pieces
+        # Black
+        self.b_king = pieces["black_king"]
+        self.b_bishop = pieces["black_bishop"]
+        self.b_knight = pieces["black_knight"]
+        self.b_queen = pieces["black_queen"]
+        self.b_pawn = pieces["black_pawn"]
+        self.b_rook = pieces["black_rook"]
+        # White
+        self.w_king = pieces["white_king"]
+        self.w_bishop = pieces["white_bishop"]
+        self.w_knight = pieces["white_knight"]
+        self.w_queen = pieces["white_queen"]
+        self.w_pawn = pieces["white_pawn"]
+        self.w_rook = pieces["white_rook"]
+
         self.set_board(0)
         self.selected = None, None
         self.possible_moves = []
@@ -35,6 +57,22 @@ class Control :
             "white-right": 0,
             "black-left": 0,
             "black-right": 0
+        }
+        
+        # For debugging
+        self.debugging = {
+            self.w_king: "white-king",
+            self.w_bishop: "white-bishop",
+            self.w_knight: "white-knight",
+            self.w_pawn: "white-pawn",
+            self.w_queen: "white-queen",
+            self.w_rook: "white-rook",
+            self.b_king: "black-king",
+            self.b_bishop: "black-bishop",
+            self.b_knight: "black-knight",
+            self.b_pawn: "black-pawn",
+            self.b_queen: "black-queen",
+            self.b_rook: "black-rook",
         }
 
 
@@ -58,34 +96,13 @@ class Control :
             }
         elif orient == -1 :
             # Switch sides
-            self.selected = None, None
+            self.selected = [None, None]
             self.possible_moves = []
             for i in self.black_pieces_pos :
                 self.black_pieces_pos[i][1] = [[7-i[0], 7-i[1]] for i in self.black_pieces_pos[i][1]]
             for i in self.white_pieces_pos :
                 self.white_pieces_pos[i][1] = [[7-i[0], 7-i[1]] for i in self.white_pieces_pos[i][1]]
             self.turn, self.opponent = self.opponent, self.turn
-
-
-    def load_assets(self) :
-        def process_img(loc) :
-            return pygame.transform.scale(
-                pygame.image.load(loc), (PIECE_WIDTH, PIECE_HEIGHT)
-            )
-        # Black Chess pieces
-        self.b_king = process_img(os.path.join("Assets", "Black", "king.png"))
-        self.b_bishop = process_img(os.path.join("Assets", "Black", "bishop.png"))
-        self.b_knight = process_img(os.path.join("Assets", "Black", "knight.png"))
-        self.b_pawn = process_img(os.path.join("Assets", "Black", "pawn.png"))
-        self.b_queen = process_img(os.path.join("Assets", "Black", "queen.png"))
-        self.b_rook = process_img(os.path.join("Assets", "Black", "rook.png"))
-        # White Chess pieces
-        self.w_king = process_img(os.path.join("Assets", "White", "king.png"))
-        self.w_bishop = process_img(os.path.join("Assets", "White", "bishop.png"))
-        self.w_knight = process_img(os.path.join("Assets", "White", "knight.png"))
-        self.w_pawn = process_img(os.path.join("Assets", "White", "pawn.png"))
-        self.w_queen = process_img(os.path.join("Assets", "White", "queen.png"))
-        self.w_rook = process_img(os.path.join("Assets", "White", "rook.png"))
 
 
     def scan_board(self, r, c) :
@@ -100,6 +117,7 @@ class Control :
 
 
     def piece_move(self, piece, pos, p) :
+        print("In piece move")
         def limit(seq) :
             return [i for i in seq if i[0] in range(0, 8) and i[1] in range(0, 8) and i != pos]
         def free_space(seq) :
@@ -115,6 +133,11 @@ class Control :
         ret = []
         own = self.turn if p else self.opponent
         opp = self.opponent if p else self.turn
+        turn = "white" if self.turn == self.white_pieces_pos else "black"
+        opponent = "white" if turn == "black" else "white"
+        # print(f"self.turn: {turn} and self opponent: {opponent}")
+        # print(f"piece: {self.debugging[piece]}")
+        # print(f"pos is: {pos}")
         # If piece is a king
         if piece in [self.b_king, self.w_king] :
             ret = free_space(limit([[i, j]for i in range(pos[0]-1, pos[0]+2) for j in range(pos[1]-1, pos[1]+2)]))
@@ -128,9 +151,10 @@ class Control :
             pawn_remove(lambda i, j: not self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1]+1)
             pawn_remove(lambda i, j: self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1])
             t = (self.w_pawn, self.b_pawn)
-            if piece in t and [i for i in range(2) if [pos, i] in self.starting_pos[t]] :
+            if piece in t and [i for i in range(2) if [pos, i] in self.starting_pos[t]] and not self.scan_board(pos[0]-1, pos[1]) :
                 ret.append([pos[0]-2, pos[1]])
                 pawn_remove(lambda i, j: self.scan_board(i, j) and [i, j] in ret, pos[0]-2, pos[1])
+
         # If piece is a bishop
         elif piece in [self.b_bishop, self.w_bishop] :
             i, j = pos[0]-1, pos[1]-1
@@ -161,42 +185,55 @@ class Control :
                 [pos[0]-2, pos[1]+1], [pos[0]-2, pos[1]-1], [pos[0]-1, pos[1]+2], [pos[0]-1, pos[1]-2],
                 [pos[0]+2, pos[1]+1], [pos[0]+2, pos[1]-1], [pos[0]+1, pos[1]+2], [pos[0]+1, pos[1]-2]
             ]))
-        if self.check_condition and p and p != 3 :
+
+        if p != 3 and piece in self.turn :
             ret = self.stage_and_filter(ret, piece, pos)
+
         return ret
 
 
     def stage_and_filter(self, moves, piece, pos) :
-        ret = []
-        if piece not in self.turn :
-            return moves
+        print("#"*100)
+        print(f"piece: {self.debugging[piece]}; pos: {pos}")
+        print(f"len(moves): {len(moves)}")
+        temp = moves[:]
+        check = self.check_condition
         self.turn[piece][1].remove(pos)
-        for i in moves :
+        c = 1
+        for i in temp :
+            print(f"len(ret) is: {len(moves)}")
+            print(f"{c}th time in loop"+">"*10)
+            c += 1
             native = self.scan_board(i[0], i[1])
             if native :
                 self.opponent[native][1].remove(i)
             self.turn[piece][1].append(i)
             self.check()
-            if not self.check_condition :
-                ret.append(i)
+            print(f"i: {i}")
+            print(f"self.check_condition: {self.check_condition}")
+            if self.check_condition :
+                self.check_condition = check
+                moves.remove(i)
             self.turn[piece][1].remove(i)
             if native :
                 self.opponent[native][1].append(i)
+        print("Out of loop")
         self.turn[piece][1].append(pos)
-        return ret
+        
+        return moves
 
 
     def attacked_loc(self) :
+        print("in attacked_loc")
         ret = []
         for i in self.opponent :
-            a = 0
             for j in self.opponent[i][1] :
-                a += 1
                 ret += self.piece_move(i, j, False)
         return ret
 
 
     def checkmate(self) :
+        print("\n in checkmate")
         ret = []
         for i in self.turn :
             for j in self.turn[i][1] :
@@ -206,16 +243,16 @@ class Control :
         return False
 
 
-    def check(self, bool=False) :
+    def check(self) :
+        print("in Check")
         attacked = self.attacked_loc()
         self.checkcount = 0
         king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
         if self.turn[king][1][0] in attacked :
+            print("Check condition set to true")
             self.check_condition = True
-            # if bool :
-            #     if self.checkmate() :
-            #         print(f"{'&'*100} CHECKMATE!!")
         else :
+            print("check condition set to false")
             self.check_condition = False
 
 
@@ -246,9 +283,13 @@ class Control :
         rook = self.w_rook if self.turn == self.white_pieces_pos else self.b_rook
         king = self.w_king if self.turn == self.white_pieces_pos else self.b_king
         if piece in self.turn and not (piece == rook and self.selected[0] == king) :
-            self.check(bool=True)
-            self.selected = (piece, loc)
+            self.check()
+            self.selected = [piece, loc]
             self.possible_moves = self.piece_move(piece, loc, True)
+            if self.check_condition :
+                if self.checkmate() :
+                    print(f"{'@'*100} \nCHECKMATE!!")
+                    pygame.event.post(pygame.event.Event(CHECKMATE))
         elif self.selected[1] and loc in self.possible_moves :
             # If there is a piece in the new location, it gets taken
             if piece :
@@ -260,10 +301,22 @@ class Control :
             if self.selected[0] in t and i :
                 self.starting_pos[t][self.starting_pos[t].index([self.selected[1], i-1])][1] += 1
             self.turn[self.selected[0]][1].remove(self.selected[1])
+            # Piece is a pawn and has reached the end of the board, promote pawn to queen
+            if self.selected[0] in t and loc[0] == 0 :
+                self.selected[0] = self.w_queen if self.turn == self.white_pieces_pos else self.b_queen
             self.turn[self.selected[0]][1].append(loc)
+
             self.set_board(-1)
         elif self.selected[0] == king and piece == rook :
             self.castle(king, rook, loc)
+
+
+    def game_over(self) :
+        won = "White" if self.opponent == self.white_pieces_pos else "Black"
+        text = GAMEOVER.render(f"CHECKMATE.. {won} Wins!", 1, WHITE)
+        self.WIN.blit(text, (WIDTH/2 - text.get_width()/2, HEIGHT/2 - text.get_height()/2))
+        pygame.display.update()
+        pygame.time.delay(4000)
 
 
     def draw_window(self) :
@@ -285,7 +338,7 @@ class Control :
 
         pygame.display.update()
         
-        
+
     def main(self) :
         clock = pygame.time.Clock()
         run = True
@@ -298,17 +351,51 @@ class Control :
 
                 if event.type == pygame.MOUSEBUTTONDOWN :
                     mouse_pos = [i//100 for i in pygame.mouse.get_pos()]
+                    print("$"*100)
+                    print("$"*100)
                     print(f"mouse button down values are: {mouse_pos[1], mouse_pos[0]}")
                     self.click_handle(mouse_pos[::-1])
                 
+                if event.type == CHECKMATE :
+                    print("Event captured!")
+                    self.game_over()
+                    print("Game over displayed")
+                    self.__init__(self.WIN, self.pieces)
+                
             self.draw_window()
 
+        print("outside loop")
         pygame.quit()
 
 
+def load_assets() :
+        def process_img(loc) :
+            return pygame.transform.scale(
+                pygame.image.load(loc), (PIECE_WIDTH, PIECE_HEIGHT)
+            )
+        pieces = dict()
+        # Black Chess pieces
+        pieces["black_king"] = process_img(os.path.join("Assets", "Black", "king.png"))
+        pieces["black_bishop"] = process_img(os.path.join("Assets", "Black", "bishop.png"))
+        pieces["black_knight"] = process_img(os.path.join("Assets", "Black", "knight.png"))
+        pieces["black_pawn"] = process_img(os.path.join("Assets", "Black", "pawn.png"))
+        pieces["black_queen"] = process_img(os.path.join("Assets", "Black", "queen.png"))
+        pieces["black_rook"] = process_img(os.path.join("Assets", "Black", "rook.png"))
+        # White Chess pieces
+        pieces["white_king"] = process_img(os.path.join("Assets", "White", "king.png"))
+        pieces["white_bishop"] = process_img(os.path.join("Assets", "White", "bishop.png"))
+        pieces["white_knight"] = process_img(os.path.join("Assets", "White", "knight.png"))
+        pieces["white_pawn"] = process_img(os.path.join("Assets", "White", "pawn.png"))
+        pieces["white_queen"] = process_img(os.path.join("Assets", "White", "queen.png"))
+        pieces["white_rook"] = process_img(os.path.join("Assets", "White", "rook.png"))
+        
+        return pieces
+
+
 if __name__ == "__main__" :
+    pieces = load_assets()
     WIN = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Chess!")
     
-    ctrl = Control(WIN)
+    ctrl = Control(WIN, pieces)
     ctrl.main()
