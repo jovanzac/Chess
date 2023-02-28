@@ -58,22 +58,6 @@ class Control :
             "black-left": 0,
             "black-right": 0
         }
-        
-        # For debugging
-        self.debugging = {
-            self.w_king: "white-king",
-            self.w_bishop: "white-bishop",
-            self.w_knight: "white-knight",
-            self.w_pawn: "white-pawn",
-            self.w_queen: "white-queen",
-            self.w_rook: "white-rook",
-            self.b_king: "black-king",
-            self.b_bishop: "black-bishop",
-            self.b_knight: "black-knight",
-            self.b_pawn: "black-pawn",
-            self.b_queen: "black-queen",
-            self.b_rook: "black-rook",
-        }
 
 
     def set_board(self, orient) :
@@ -189,9 +173,7 @@ class Control :
         temp = moves[:]
         check = self.check_condition
         self.turn[piece][1].remove(pos)
-        c = 1
         for i in temp :
-            c += 1
             native = self.scan_board(i[0], i[1])
             if native :
                 self.opponent[native][1].remove(i)
@@ -228,7 +210,6 @@ class Control :
 
     def check(self) :
         attacked = self.attacked_loc()
-        self.checkcount = 0
         king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
         if self.turn[king][1][0] in attacked :
             self.check_condition = True
