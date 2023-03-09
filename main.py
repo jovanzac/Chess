@@ -56,22 +56,6 @@ class Control :
             "white": 0,
             "black": 0
         }
-        
-        # For debugging
-        self.debugging = {
-            self.w_king: "white-king",
-            self.w_bishop: "white-bishop",
-            self.w_knight: "white-knight",
-            self.w_pawn: "white-pawn",
-            self.w_queen: "white-queen",
-            self.w_rook: "white-rook",
-            self.b_king: "black-king",
-            self.b_bishop: "black-bishop",
-            self.b_knight: "black-knight",
-            self.b_pawn: "black-pawn",
-            self.b_queen: "black-queen",
-            self.b_rook: "black-rook",
-        }
 
 
     def set_board(self, orient) :
@@ -115,7 +99,6 @@ class Control :
 
 
     def piece_move(self, piece, pos, p) :
-        print("In piece move")
         def limit(seq) :
             return [i for i in seq if i[0] in range(0, 8) and i[1] in range(0, 8) and i != pos]
         def free_space(seq) :
@@ -131,11 +114,6 @@ class Control :
         ret = []
         own = self.turn if p in (1, 2) else self.opponent
         opp = self.opponent if p in (1, 2) else self.turn
-        turn = "white" if self.turn == self.white_pieces_pos else "black"
-        opponent = "white" if turn == "black" else "black"
-        print(f"self.turn: {turn} and self opponent: {opponent}")
-        print(f"piece: {self.debugging[piece]}")
-        print(f"pos is: {pos}")
         # If piece is a king
         if piece in [self.b_king, self.w_king] :
             ret = free_space(limit([[i, j]for i in range(pos[0]-1, pos[0]+2) for j in range(pos[1]-1, pos[1]+2)]))
@@ -189,47 +167,31 @@ class Control :
         if p not in (2, 3) and piece in self.turn and ret :
             ret = self.stage_and_filter(ret, piece, pos)
 
-        print(f"p: {self.debugging[piece]}")
-        # if self.debugging[piece][6:] == "queen" :
-        #     print(f"Locations attacked by queen are: {ret}")
-
         return ret
 
 
     def stage_and_filter(self, moves, piece, pos) :
-        print("#"*100)
-        print(f"piece: {self.debugging[piece]}; pos: {pos}")
-        print(f"len(moves): {len(moves)}")
         temp = moves[:]
         check = self.check_condition
         self.turn[piece][1].remove(pos)
-        c = 1
         for i in temp :
-            print(f"len(ret) is: {len(moves)}")
-            print(f"{c}th time in loop"+">"*10)
-            c += 1
             native = self.scan_board(i[0], i[1])
             if native :
-                print(f"The native piece is: {self.debugging[native]}")
                 self.opponent[native][1].remove(i)
             self.turn[piece][1].append(i)
             self.check()
-            print(f"i: {i}")
-            print(f"self.check_condition: {self.check_condition}")
             if self.check_condition :
                 self.check_condition = check
                 moves.remove(i)
             self.turn[piece][1].remove(i)
             if native :
                 self.opponent[native][1].append(i)
-        print("Out of loop")
         self.turn[piece][1].append(pos)
         
         return moves
 
 
     def attacked_loc(self) :
-        print("in attacked_loc")
         ret = []
         for i in self.opponent :
             for j in self.opponent[i][1] :
@@ -238,7 +200,6 @@ class Control :
 
 
     def checkmate(self) :
-        print("\n in checkmate")
         ret = []
         for i in self.turn :
             for j in self.turn[i][1] :
@@ -249,18 +210,12 @@ class Control :
 
 
     def check(self) :
-        print("in Check")
-        print("\n")
         attacked = self.attacked_loc()
-        print("\n")
-        print(f"Attacked loc are: {attacked}")
         self.checkcount = 0
         king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
         if self.turn[king][1][0] in attacked :
-            print("Check condition set to true")
             self.check_condition = True
         else :
-            print("check condition set to false")
             self.check_condition = False
 
 
@@ -273,16 +228,12 @@ class Control :
         side = "white" if self.turn == self.white_pieces_pos else "black"
         direction = "right" if rook_pos == [7, 7] else "left"
         blocks = 3 if (direction=="left" and side=="white") or (direction=="right" and side=="black") else 2
-        print(f"check_empty() is: {check_empty()}")
         if self.castle_count[side] == 0 and check_empty() :
-            print("In first if")
             if direction == "right" :
-                print("In right")
                 self.turn[king][1][0] = [7, self.turn[king][1][0][1]+2]
                 self.turn[rook][1].remove([7, 7])
                 self.turn[rook][1].append([7, 7-blocks])
             elif direction == "left" :
-                print("In left")
                 self.turn[king][1][0] = [7, self.turn[king][1][0][1]-2]
                 self.turn[rook][1].remove([7, 0])
                 self.turn[rook][1].append([7, blocks])
@@ -301,7 +252,6 @@ class Control :
             self.possible_moves = self.piece_move(piece, loc, 1)
             if self.check_condition :
                 if self.checkmate() :
-                    print(f"{'@'*100} \nCHECKMATE!!")
                     pygame.event.post(pygame.event.Event(CHECKMATE))
         elif self.selected[1] and loc in self.possible_moves :
             # If there is a piece in the new location, it gets taken
@@ -323,7 +273,6 @@ class Control :
 
             self.set_board(-1)
         elif self.selected[0] == king and piece == rook :
-            print("Here in castle condition")
             self.castle(king, rook, loc)
 
 
@@ -367,20 +316,15 @@ class Control :
 
                 if event.type == pygame.MOUSEBUTTONDOWN :
                     mouse_pos = [i//100 for i in pygame.mouse.get_pos()]
-                    print("$"*100)
-                    print("$"*100)
                     print(f"mouse button down values are: {mouse_pos[1], mouse_pos[0]}")
                     self.click_handle(mouse_pos[::-1])
                 
                 if event.type == CHECKMATE :
-                    print("Event captured!")
                     self.game_over()
-                    print("Game over displayed")
                     self.__init__(self.WIN, self.pieces)
                 
             self.draw_window()
 
-        print("outside loop")
         pygame.quit()
 
 
