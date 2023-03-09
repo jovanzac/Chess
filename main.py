@@ -53,10 +53,24 @@ class Control :
             (self.w_pawn, self.b_pawn) : [[[6, i], 0] for i in range(8)],
         }
         self.castle_count = {
-            "white-left": 0,
-            "white-right": 0,
-            "black-left": 0,
-            "black-right": 0
+            "white": 0,
+            "black": 0
+        }
+        
+        # For debugging
+        self.debugging = {
+            self.w_king: "white-king",
+            self.w_bishop: "white-bishop",
+            self.w_knight: "white-knight",
+            self.w_pawn: "white-pawn",
+            self.w_queen: "white-queen",
+            self.w_rook: "white-rook",
+            self.b_king: "black-king",
+            self.b_bishop: "black-bishop",
+            self.b_knight: "black-knight",
+            self.b_pawn: "black-pawn",
+            self.b_queen: "black-queen",
+            self.b_rook: "black-rook",
         }
 
 
@@ -101,6 +115,7 @@ class Control :
 
 
     def piece_move(self, piece, pos, p) :
+        print("In piece move")
         def limit(seq) :
             return [i for i in seq if i[0] in range(0, 8) and i[1] in range(0, 8) and i != pos]
         def free_space(seq) :
@@ -114,8 +129,14 @@ class Control :
                 j += b
 
         ret = []
-        own = self.turn if p else self.opponent
-        opp = self.opponent if p else self.turn
+        own = self.turn if p in (1, 2) else self.opponent
+        opp = self.opponent if p in (1, 2) else self.turn
+        turn = "white" if self.turn == self.white_pieces_pos else "black"
+        opponent = "white" if turn == "black" else "black"
+        print(f"self.turn: {turn} and self opponent: {opponent}")
+        print(f"piece: {self.debugging[piece]}")
+        print(f"pos is: {pos}")
+        # If piece is a king
         if piece in [self.b_king, self.w_king] :
             ret = free_space(limit([[i, j]for i in range(pos[0]-1, pos[0]+2) for j in range(pos[1]-1, pos[1]+2)]))
         # If piece is a pawn
@@ -123,7 +144,8 @@ class Control :
             def pawn_remove(condition, i, j) :
                 if condition(i, j) :
                     ret.remove([i, j])
-            ret = free_space(limit([[pos[0]-1, pos[1]-1], [pos[0]-1, pos[1]], [pos[0]-1, pos[1]+1]]))
+            side = -1 if p else 1
+            ret = free_space(limit([[pos[0]+side, pos[1]-1], [pos[0]+side, pos[1]], [pos[0]+side, pos[1]+1]]))
             pawn_remove(lambda i, j: not self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1]-1)
             pawn_remove(lambda i, j: not self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1]+1)
             pawn_remove(lambda i, j: self.scan_board(i, j) and [i, j] in ret, pos[0]-1, pos[1])
@@ -154,8 +176,9 @@ class Control :
             loop(lambda i, j:self.scan_board(i, j), i, j, 0, 1)
         # If piece is a queen
         elif piece in [self.b_queen, self.w_queen] :
-            ret += self.piece_move(self.b_bishop, pos, 3)
-            ret += self.piece_move(self.b_rook, pos, 3)
+            v = 2 if p==1 else 3
+            ret += self.piece_move(self.b_bishop, pos, v)
+            ret += self.piece_move(self.b_rook, pos, v)
         # If piece is a knight
         elif piece in [self.b_knight, self.w_knight] :
             ret = free_space(limit([
@@ -163,79 +186,107 @@ class Control :
                 [pos[0]+2, pos[1]+1], [pos[0]+2, pos[1]-1], [pos[0]+1, pos[1]+2], [pos[0]+1, pos[1]-2]
             ]))
 
-        if p != 3 and piece in self.turn :
+        if p not in (2, 3) and piece in self.turn and ret :
             ret = self.stage_and_filter(ret, piece, pos)
+
+        print(f"p: {self.debugging[piece]}")
+        # if self.debugging[piece][6:] == "queen" :
+        #     print(f"Locations attacked by queen are: {ret}")
 
         return ret
 
 
     def stage_and_filter(self, moves, piece, pos) :
+        print("#"*100)
+        print(f"piece: {self.debugging[piece]}; pos: {pos}")
+        print(f"len(moves): {len(moves)}")
         temp = moves[:]
         check = self.check_condition
         self.turn[piece][1].remove(pos)
+        c = 1
         for i in temp :
+            print(f"len(ret) is: {len(moves)}")
+            print(f"{c}th time in loop"+">"*10)
+            c += 1
             native = self.scan_board(i[0], i[1])
             if native :
+                print(f"The native piece is: {self.debugging[native]}")
                 self.opponent[native][1].remove(i)
             self.turn[piece][1].append(i)
             self.check()
+            print(f"i: {i}")
+            print(f"self.check_condition: {self.check_condition}")
             if self.check_condition :
                 self.check_condition = check
                 moves.remove(i)
             self.turn[piece][1].remove(i)
             if native :
                 self.opponent[native][1].append(i)
+        print("Out of loop")
         self.turn[piece][1].append(pos)
         
         return moves
 
 
     def attacked_loc(self) :
+        print("in attacked_loc")
         ret = []
         for i in self.opponent :
             for j in self.opponent[i][1] :
-                ret += self.piece_move(i, j, False)
+                ret += self.piece_move(i, j, 0)
         return ret
 
 
     def checkmate(self) :
+        print("\n in checkmate")
         ret = []
         for i in self.turn :
             for j in self.turn[i][1] :
-               ret += self.piece_move(i, j, True)
+               ret += self.piece_move(i, j, 1)
         if not ret :
             return True
         return False
 
 
     def check(self) :
+        print("in Check")
+        print("\n")
         attacked = self.attacked_loc()
+        print("\n")
+        print(f"Attacked loc are: {attacked}")
+        self.checkcount = 0
         king = self.b_king if self.turn == self.black_pieces_pos else self.w_king
         if self.turn[king][1][0] in attacked :
+            print("Check condition set to true")
             self.check_condition = True
         else :
+            print("check condition set to false")
             self.check_condition = False
 
 
     def castle(self, king, rook, rook_pos) :
         """Implement castling"""
         def check_empty() :
-            r = range(0, blocks+1) if direction == "left" else range(5, 7) if side == "white" else range(4, 7)
+            r = range(1, blocks+1) if direction == "left" else range(5, 7) if side == "white" else range(4, 7)
             l =list(set([self.scan_board(7, i) for i in r]))
             return True if len(l) == 1 and l[0] == None else False
         side = "white" if self.turn == self.white_pieces_pos else "black"
         direction = "right" if rook_pos == [7, 7] else "left"
         blocks = 3 if (direction=="left" and side=="white") or (direction=="right" and side=="black") else 2
-        if self.castle_count[f"{side}-{direction}"] == 0 and check_empty() :
+        print(f"check_empty() is: {check_empty()}")
+        if self.castle_count[side] == 0 and check_empty() :
+            print("In first if")
             if direction == "right" :
+                print("In right")
                 self.turn[king][1][0] = [7, self.turn[king][1][0][1]+2]
                 self.turn[rook][1].remove([7, 7])
                 self.turn[rook][1].append([7, 7-blocks])
             elif direction == "left" :
+                print("In left")
                 self.turn[king][1][0] = [7, self.turn[king][1][0][1]-2]
                 self.turn[rook][1].remove([7, 0])
                 self.turn[rook][1].append([7, blocks])
-            self.castle_count[f"{side}-{direction}"] += 1
+            self.castle_count[side] += 1
             self.set_board(-1)
 
 
@@ -243,13 +294,14 @@ class Control :
         piece = self.scan_board(loc[0], loc[1])
         rook = self.w_rook if self.turn == self.white_pieces_pos else self.b_rook
         king = self.w_king if self.turn == self.white_pieces_pos else self.b_king
+        turn = "white" if self.turn == self.white_pieces_pos else "black"
         if piece in self.turn and not (piece == rook and self.selected[0] == king) :
             self.check()
             self.selected = [piece, loc]
-            self.possible_moves = self.piece_move(piece, loc, True)
-            # Post event CHECKMATE if under checmate condition
+            self.possible_moves = self.piece_move(piece, loc, 1)
             if self.check_condition :
                 if self.checkmate() :
+                    print(f"{'@'*100} \nCHECKMATE!!")
                     pygame.event.post(pygame.event.Event(CHECKMATE))
         elif self.selected[1] and loc in self.possible_moves :
             # If there is a piece in the new location, it gets taken
@@ -265,10 +317,13 @@ class Control :
             # Piece is a pawn and has reached the end of the board, promote pawn to queen
             if self.selected[0] in t and loc[0] == 0 :
                 self.selected[0] = self.w_queen if self.turn == self.white_pieces_pos else self.b_queen
+            if self.selected[0] == king or self.selected[0] == rook and piece != rook :
+                self.castle_count[turn] += 1
             self.turn[self.selected[0]][1].append(loc)
 
             self.set_board(-1)
         elif self.selected[0] == king and piece == rook :
+            print("Here in castle condition")
             self.castle(king, rook, loc)
 
 
@@ -312,15 +367,20 @@ class Control :
 
                 if event.type == pygame.MOUSEBUTTONDOWN :
                     mouse_pos = [i//100 for i in pygame.mouse.get_pos()]
+                    print("$"*100)
+                    print("$"*100)
                     print(f"mouse button down values are: {mouse_pos[1], mouse_pos[0]}")
                     self.click_handle(mouse_pos[::-1])
                 
                 if event.type == CHECKMATE :
+                    print("Event captured!")
                     self.game_over()
+                    print("Game over displayed")
                     self.__init__(self.WIN, self.pieces)
                 
             self.draw_window()
 
+        print("outside loop")
         pygame.quit()
 
 
